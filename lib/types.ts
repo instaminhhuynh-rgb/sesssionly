@@ -70,6 +70,8 @@ export interface Client {
   avgScore: number;
   lifetime: number;
   color: string;
+  /** Optional uploaded photo (data URL). Falls back to color + initials. */
+  photo?: string | null;
   prefs: string[];
   notes: ClientNote[];
   reviews: Review[];

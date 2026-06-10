@@ -6,7 +6,17 @@ export function cx(...a: Array<string | false | null | undefined>): string {
   return a.filter(Boolean).join(" ");
 }
 
-export function Avatar({ initials, color = "#3E5C76", size = 36, ring = false }: { initials: string; color?: string; size?: number; ring?: boolean }) {
+export function Avatar({ initials, color = "#3E5C76", size = 36, ring = false, photo }: { initials: string; color?: string; size?: number; ring?: boolean; photo?: string | null }) {
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt={initials}
+        className={cx("object-cover shrink-0", ring && "ring-2 ring-white shadow-sm")}
+        style={{ width: size, height: size, borderRadius: size / 3 }}
+      />
+    );
+  }
   return (
     <div
       className={cx("shrink-0 flex items-center justify-center font-semibold text-white", ring && "ring-2 ring-white shadow-sm")}

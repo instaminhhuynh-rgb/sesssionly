@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Btn, Card, Empty, Pill, ScoreRing, Segmented, Star, Toggle, cx } from "./ui";
 import { Icon } from "./icons";
 import { useToast } from "./toast";
-import { HostAvatar } from "./profile";
+import { HostAvatar, readImageScaled } from "./profile";
 import { HOST, SERVICES, getService, getSessionsForClient } from "@/lib/mock-data";
 import { fmtDay, to12 } from "@/lib/format";
 import { scoreReasons, scoreBand } from "@/lib/session-score";
@@ -30,7 +30,7 @@ interface FollowUpDraft {
   source: "ai" | "template";
   model?: string;
 }
-import type { Client, EnrichedSession } from "@/lib/types";
+import type { Client, ClientTag, ClientPayment, Review, EnrichedSession } from "@/lib/types";
 
 /* ------------------------- overlay context ------------------------- */
 interface OverlayApi {
@@ -336,7 +336,7 @@ function SessionDetail({ session: s, onClose, onOpenClient }: { session: Enriche
     >
       <div className="flex items-center gap-3.5 mb-5">
         <div className="w-1.5 self-stretch rounded-full" style={{ background: s.service.color }} />
-        <Avatar initials={s.client.initials} color={s.client.color} size={48} />
+        <Avatar initials={s.client.initials} color={s.client.color} photo={s.client.photo} size={48} />
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-lg">{s.client.name}</div>
           <div className="text-[13px] text-muted">{s.service.name} · {fmtDay(s.day)} · {to12(s.start)} to {to12(s.end)} · {s.location}</div>
@@ -460,17 +460,88 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
   const toast = useToast();
   const [tab, setTab] = useState<"memory" | "sessions" | "reviews" | "payments">("memory");
   const sessions = getSessionsForClient(c.id);
-  const tagTone = c.tag === "At risk" || c.tag === "Overdue" ? "bad" : c.tag === "New lead" ? "info" : "good";
+
+  // Editable memory (held in the drawer; persists to the client record once the backend lands).
+  const [notes, setNotes] = useState(c.notes);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [prefs, setPrefs] = useState(c.prefs);
+  const [prefDraft, setPrefDraft] = useState("");
+  function addNote() {
+    const t = noteDraft.trim();
+    if (!t) return;
+    setNotes((n) => [{ d: "Today", t }, ...n]);
+    setNoteDraft("");
+    toast("Note added");
+  }
+  function addPref() {
+    const t = prefDraft.trim();
+    if (!t) return;
+    setPrefs((p) => [...p, t]);
+    setPrefDraft("");
+  }
+
+  // Editable client info (name, contact, tag, color, photo).
+  const CLIENT_COLORS = ["#3E5C76", "#5B8266", "#A6794C", "#7A5C8E", "#B45309", "#2F6F6A", "#BE123C", "#475569"];
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(c.name);
+  const [email, setEmail] = useState(c.email);
+  const [phone, setPhone] = useState(c.phone);
+  const [tag, setTag] = useState<ClientTag>(c.tag);
+  const [color, setColor] = useState(c.color);
+  const [photo, setPhoto] = useState<string | null>(c.photo ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const ini = (name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("") || c.initials).toUpperCase();
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try { setPhoto(await readImageScaled(f)); } catch {}
+  }
+
+  // Add-records: log a past session, add a testimonial, record a payment.
+  const [reviews, setReviews] = useState(c.reviews);
+  const [payments, setPayments] = useState(c.payments);
+  const [logged, setLogged] = useState<{ service: string; date: string; note: string }[]>([]);
+  const [addPanel, setAddPanel] = useState<null | "session" | "review" | "payment">(null);
+  const tagTone = tag === "At risk" || tag === "Overdue" ? "bad" : tag === "New lead" ? "info" : "good";
   return (
     <Drawer title="Client" onClose={onClose}>
-      <div className="flex items-start gap-3.5 mb-5">
-        <Avatar initials={c.initials} color={c.color} size={56} />
+      <div className="flex items-start gap-3.5 mb-4">
+        <Avatar initials={ini} color={color} photo={photo} size={56} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">{c.name}</h2><Pill tone={tagTone}>{c.tag}</Pill></div>
-          <div className="text-[13px] text-muted">{c.email} · {c.phone}</div>
+          <div className="flex items-center gap-2"><h2 className="text-lg font-semibold truncate">{name}</h2><Pill tone={tagTone}>{tag}</Pill></div>
+          <div className="text-[13px] text-muted truncate">{[email, phone].filter(Boolean).join(" · ") || "No contact info yet"}</div>
+          <button onClick={() => setEditing((v) => !v)} className="text-[12px] text-accent font-medium mt-1">{editing ? "Close editor" : "Edit details"}</button>
         </div>
         <div className="text-center"><ScoreRing score={c.avgScore} size={50} /><div className="text-[10px] text-faint mt-1">Avg score</div></div>
       </div>
+
+      {editing && (
+        <Card className="!p-4 mb-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => fileRef.current?.click()} className="relative group rounded-[16px] overflow-hidden shrink-0" style={{ width: 48, height: 48 }} title="Add photo">
+              <Avatar initials={ini} color={color} photo={photo} size={48} />
+              <span className="absolute inset-0 bg-black/0 group-hover:bg-black/35 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"><Icon.pencil className="w-4 h-4" /></span>
+            </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CLIENT_COLORS.map((cc) => (
+                <button key={cc} onClick={() => setColor(cc)} className={cx("w-6 h-6 rounded-full", color === cc && !photo && "ring-2 ring-offset-2 ring-ink")} style={{ background: cc }} aria-label="Pick color" />
+              ))}
+              {photo && <button onClick={() => setPhoto(null)} className="text-[12px] text-accent ml-1">Remove photo</button>}
+            </div>
+          </div>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="inp !text-[13px]" />
+          <div className="grid grid-cols-2 gap-2">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="inp !text-[13px]" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="inp !text-[13px]" />
+          </div>
+          <select value={tag} onChange={(e) => setTag(e.target.value as ClientTag)} className="inp !text-[13px]">
+            {(["New lead", "Repeat", "Package", "At risk", "Overdue"] as ClientTag[]).map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <div className="flex justify-end"><Btn size="sm" onClick={() => { setEditing(false); toast("Client updated"); }}>Save</Btn></div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+        </Card>
+      )}
 
       <div className="grid grid-cols-4 gap-2 mb-5">
         {([["Sessions", c.sessions], ["Lifetime", "$" + c.lifetime.toLocaleString()], ["Cancels", c.cancellations], ["No-shows", c.noShows]] as const).map(([k, v]) => (
@@ -486,21 +557,47 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
         <div className="space-y-4">
           <div>
             <div className="text-[12px] font-semibold text-faint uppercase mb-2">Relationship memory</div>
-            <div className="flex flex-wrap gap-1.5">{c.prefs.map((p, i) => <span key={i} className="text-[12px] bg-accentSoft text-accent px-2 py-1 rounded-full">{p}</span>)}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {prefs.map((p, i) => (
+                <span key={i} className="text-[12px] bg-accentSoft text-accent pl-2 pr-1 py-1 rounded-full inline-flex items-center gap-1">
+                  {p}
+                  <button onClick={() => setPrefs((arr) => arr.filter((_, idx) => idx !== i))} className="text-accent/50 hover:text-accent"><Icon.x className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <input value={prefDraft} onChange={(e) => setPrefDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPref()} placeholder="Add something to remember…" className="inp !text-[13px]" />
+              <Btn size="sm" variant="secondary" onClick={addPref}>Add</Btn>
+            </div>
           </div>
           <div>
             <div className="text-[12px] font-semibold text-faint uppercase mb-2">Notes timeline</div>
+            <div className="flex gap-2 mb-3 items-start">
+              <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} rows={2} placeholder="Add a note…" className="inp !text-[13px] resize-none" />
+              <Btn size="sm" onClick={addNote}>Add</Btn>
+            </div>
             <div className="space-y-2.5">
-              {c.notes.map((n, i) => (
+              {notes.length ? notes.map((n, i) => (
                 <div key={i} className="flex gap-3"><div className="text-[11px] text-faint w-12 shrink-0 pt-0.5">{n.d}</div><div className="flex-1 text-[13px] text-ink/90 border-l-2 border-line pl-3">{n.t}</div></div>
-              ))}
+              )) : <Empty>No notes yet. Add your first above.</Empty>}
             </div>
           </div>
         </div>
       )}
       {tab === "sessions" && (
         <div className="space-y-2">
-          {sessions.length ? sessions.map((s) => (
+          <div className="flex justify-end">
+            <Btn size="sm" variant="secondary" onClick={() => setAddPanel(addPanel === "session" ? null : "session")}><Icon.plus className="w-4 h-4" />Add session</Btn>
+          </div>
+          {addPanel === "session" && <AddSessionForm onAdd={(r) => { setLogged((l) => [r, ...l]); setAddPanel(null); toast("Session logged"); }} onCancel={() => setAddPanel(null)} />}
+          {logged.map((r, i) => (
+            <div key={"log" + i} className="flex items-center gap-3 p-3 border border-line rounded-[10px]">
+              <div className="w-1 self-stretch rounded-full bg-[#9A9A9F]" />
+              <div className="flex-1"><div className="text-sm font-medium">{r.service}</div><div className="text-[12px] text-muted">{r.date}{r.note ? ` · ${r.note}` : ""}</div></div>
+              <Pill tone="neutral">Logged</Pill>
+            </div>
+          ))}
+          {sessions.map((s) => (
             <button key={s.id} onClick={() => onOpenSession(s)} className="w-full">
               <div className="flex items-center gap-3 p-3 border border-line rounded-[10px] hover:bg-[#FAFAF8] text-left">
                 <div className="w-1 self-stretch rounded-full" style={{ background: s.service.color }} />
@@ -508,24 +605,33 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
                 <ScoreRing score={s.score} size={34} />
               </div>
             </button>
-          )) : <Empty>No upcoming sessions on file.</Empty>}
+          ))}
+          {sessions.length === 0 && logged.length === 0 && <Empty>No sessions on file yet.</Empty>}
         </div>
       )}
       {tab === "reviews" && (
         <div className="space-y-3">
-          {c.reviews.length ? c.reviews.map((r, i) => (
+          <div className="flex justify-end gap-2">
+            <Btn size="sm" variant="secondary" onClick={() => toast(`Review request drafted for ${name}`)}><Icon.pencil className="w-4 h-4" />Request review</Btn>
+            <Btn size="sm" variant="secondary" onClick={() => setAddPanel(addPanel === "review" ? null : "review")}><Icon.plus className="w-4 h-4" />Add testimonial</Btn>
+          </div>
+          {addPanel === "review" && <AddReviewForm onAdd={(r) => { setReviews((rv) => [r, ...rv]); setAddPanel(null); toast("Testimonial added"); }} onCancel={() => setAddPanel(null)} />}
+          {reviews.length ? reviews.map((r, i) => (
             <Card key={i} className="!p-4">
               <div className="flex items-center gap-1 mb-1.5">{Array.from({ length: 5 }).map((_, k) => <Star key={k} filled={k < r.stars} />)}<span className="text-[11px] text-faint ml-1">{r.d}</span></div>
               <p className="text-[13px] text-ink/90 italic">“{r.t}”</p>
             </Card>
-          )) : <Empty>No reviews yet. Send a review request after the next session.</Empty>}
-          <Btn size="sm" variant="secondary" className="w-full" onClick={() => toast(`Review request drafted for ${c.name}`)}><Icon.spark className="w-4 h-4" />Draft review request</Btn>
+          )) : <Empty>No reviews yet. Request one after a session, or add a testimonial you received elsewhere.</Empty>}
         </div>
       )}
       {tab === "payments" && (
         <div className="space-y-2">
-          {c.balance > 0 && <Card className="!p-3.5 flex items-center justify-between bg-badSoft border-[#FAD1D6]"><span className="text-[13px] font-medium text-bad">${c.balance} outstanding</span><Btn size="sm" onClick={() => toast(`Reminder sent to ${c.name}`)}>Send reminder</Btn></Card>}
-          {c.payments.length ? c.payments.map((p, i) => (
+          <div className="flex justify-end">
+            <Btn size="sm" variant="secondary" onClick={() => setAddPanel(addPanel === "payment" ? null : "payment")}><Icon.plus className="w-4 h-4" />Record payment</Btn>
+          </div>
+          {addPanel === "payment" && <AddPaymentForm onAdd={(p) => { setPayments((arr) => [p, ...arr]); setAddPanel(null); toast("Payment recorded"); }} onCancel={() => setAddPanel(null)} />}
+          {c.balance > 0 && <Card className="!p-3.5 flex items-center justify-between bg-badSoft border-[#FAD1D6]"><span className="text-[13px] font-medium text-bad">${c.balance} outstanding</span><Btn size="sm" onClick={() => toast(`Reminder sent to ${name}`)}>Send reminder</Btn></Card>}
+          {payments.length ? payments.map((p, i) => (
             <div key={i} className="flex items-center justify-between p-3 border border-line rounded-[10px]">
               <div><div className="text-[13px] font-medium">{p.what}</div><div className="text-[11px] text-faint">{p.d}</div></div>
               <div className="text-right"><div className="text-sm font-semibold">${p.amt}</div><Pill tone={p.status === "Paid" ? "good" : p.status === "Overdue" ? "bad" : "warn"}>{p.status}</Pill></div>
@@ -534,5 +640,47 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
         </div>
       )}
     </Drawer>
+  );
+}
+
+function AddSessionForm({ onAdd, onCancel }: { onAdd: (r: { service: string; date: string; note: string }) => void; onCancel: () => void }) {
+  const [service, setService] = useState("");
+  const [date, setDate] = useState("");
+  const [note, setNote] = useState("");
+  return (
+    <Card className="!p-3.5 space-y-2">
+      <input value={service} onChange={(e) => setService(e.target.value)} placeholder="Service (e.g. 1:1 Coaching)" autoFocus className="inp !text-[13px]" />
+      <div className="grid grid-cols-2 gap-2">
+        <input value={date} onChange={(e) => setDate(e.target.value)} placeholder="Date (e.g. Jun 3)" className="inp !text-[13px]" />
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" className="inp !text-[13px]" />
+      </div>
+      <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={onCancel}>Cancel</Btn><Btn size="sm" onClick={() => service.trim() && onAdd({ service: service.trim(), date: date.trim() || "Today", note: note.trim() })}>Log session</Btn></div>
+    </Card>
+  );
+}
+
+function AddReviewForm({ onAdd, onCancel }: { onAdd: (r: Review) => void; onCancel: () => void }) {
+  const [stars, setStars] = useState(5);
+  const [text, setText] = useState("");
+  return (
+    <Card className="!p-3.5 space-y-2">
+      <div className="flex items-center gap-1">{[1, 2, 3, 4, 5].map((n) => <button key={n} onClick={() => setStars(n)}><Star filled={n <= stars} /></button>)}</div>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Paste the testimonial you received…" className="inp !text-[13px] resize-none" />
+      <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={onCancel}>Cancel</Btn><Btn size="sm" onClick={() => text.trim() && onAdd({ d: "Added today", stars, t: text.trim() })}>Add</Btn></div>
+    </Card>
+  );
+}
+
+function AddPaymentForm({ onAdd, onCancel }: { onAdd: (p: ClientPayment) => void; onCancel: () => void }) {
+  const [amt, setAmt] = useState("");
+  const [what, setWhat] = useState("");
+  return (
+    <Card className="!p-3.5 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <input value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="Amount ($)" inputMode="numeric" autoFocus className="inp !text-[13px]" />
+        <input value={what} onChange={(e) => setWhat(e.target.value)} placeholder="For (e.g. 1:1 Coaching)" className="inp !text-[13px]" />
+      </div>
+      <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={onCancel}>Cancel</Btn><Btn size="sm" onClick={() => { const a = Number(amt) || 0; if (a <= 0 || !what.trim()) return; onAdd({ d: "Today", amt: a, status: "Paid", what: what.trim() }); }}>Record</Btn></div>
+    </Card>
   );
 }

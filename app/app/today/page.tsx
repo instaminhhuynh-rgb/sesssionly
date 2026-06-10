@@ -120,7 +120,7 @@ export default function TodayPage() {
                   <div className="p-5 flex items-center gap-4">
                     <div className="text-center shrink-0 w-14"><div className="text-[11px] text-faint font-medium">10:30</div><div className="text-[11px] text-faint">AM</div></div>
                     <div className="w-1 self-stretch rounded-full" style={{ background: next.service.color }} />
-                    <Avatar initials={next.client.initials} color={next.client.color} size={42} />
+                    <Avatar initials={next.client.initials} color={next.client.color} photo={next.client.photo} size={42} />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold">{next.client.name}</div>
                       <div className="text-[13px] text-muted">{next.service.name} · 60 min · {next.location}</div>
@@ -142,7 +142,7 @@ export default function TodayPage() {
                   <Card className="!p-3.5 flex items-center gap-3.5 hover:border-[#d8d8d2] text-left">
                     <div className="text-center shrink-0 w-12"><div className="text-[11px] font-medium">{fmtDay(s.day)}</div><div className="text-[11px] text-faint">{to12(s.start)}</div></div>
                     <div className="w-1 self-stretch rounded-full" style={{ background: s.service.color }} />
-                    <Avatar initials={s.client.initials} color={s.client.color} size={34} />
+                    <Avatar initials={s.client.initials} color={s.client.color} photo={s.client.photo} size={34} />
                     <div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{s.client.name}</div><div className="text-[12px] text-muted truncate">{s.service.name}</div></div>
                     {!s.confirmed && <Pill tone="warn">Unconfirmed</Pill>}
                     <ScoreRing score={s.score} size={34} />
@@ -198,7 +198,7 @@ export default function TodayPage() {
                 return (
                   <Card key={f.id} className="!p-3.5">
                     <div className="flex items-center gap-2.5">
-                      <Avatar initials={c.initials} color={c.color} size={30} />
+                      <Avatar initials={c.initials} color={c.color} photo={c.photo} size={30} />
                       <div className="flex-1 min-w-0"><div className="text-[13px] font-medium">{c.name}</div><div className="text-[12px] text-muted">{f.kind}</div></div>
                       <Pill tone="info">Drafted</Pill>
                     </div>

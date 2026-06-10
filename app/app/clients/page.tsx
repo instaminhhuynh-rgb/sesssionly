@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Avatar, Btn, Card, Pill, ScoreRing, Segmented } from "@/components/ui";
+import { useRef, useState } from "react";
+import { Avatar, Btn, Card, Pill, ScoreRing, Segmented, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { useOverlays } from "@/components/overlays";
 import { useToast } from "@/components/toast";
 import { PageIntro } from "@/components/page-intro";
+import { readImageScaled } from "@/components/profile";
 import { getClients } from "@/lib/mock-data";
 import type { Client, ClientTag } from "@/lib/types";
 
@@ -33,7 +34,7 @@ export default function ClientsPage() {
     return m && f;
   });
 
-  function addClient(data: { name: string; email: string; phone: string; tag: ClientTag; note: string }) {
+  function addClient(data: { name: string; email: string; phone: string; tag: ClientTag; note: string; color: string; photo: string | null }) {
     const now = new Date();
     const client: Client = {
       id: "cl_" + now.getTime(),
@@ -52,7 +53,8 @@ export default function ClientsPage() {
       nextLabel: "—",
       avgScore: 60,
       lifetime: 0,
-      color: PALETTE[clients.length % PALETTE.length],
+      color: data.color,
+      photo: data.photo,
       prefs: [],
       notes: data.note.trim() ? [{ d: "Today", t: data.note.trim() }] : [],
       reviews: [],
@@ -87,7 +89,7 @@ export default function ClientsPage() {
           <button key={c.id} onClick={() => openClient(c)} className="text-left">
             <Card className="!p-4 hover:border-[#d8d8d2] h-full">
               <div className="flex items-start gap-3">
-                <Avatar initials={c.initials} color={c.color} size={42} />
+                <Avatar initials={c.initials} color={c.color} photo={c.photo} size={42} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold truncate">{c.name}</span>
@@ -109,23 +111,55 @@ export default function ClientsPage() {
   );
 }
 
-function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: { name: string; email: string; phone: string; tag: ClientTag; note: string }) => void }) {
+function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: { name: string; email: string; phone: string; tag: ClientTag; note: string; color: string; photo: string | null }) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [tag, setTag] = useState<ClientTag>("New lead");
   const [note, setNote] = useState("");
+  const [color, setColor] = useState(PALETTE[0]);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const valid = name.trim().length > 0;
+  const previewInitials = initialsOf(name) === "?" ? "" : initialsOf(name);
+
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      setPhoto(await readImageScaled(f));
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[66] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-surface rounded-[16px] shadow-2xl w-full max-w-md p-6">
+      <div className="relative bg-surface rounded-[16px] shadow-2xl w-full max-w-md p-6 max-h-[92vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 rounded-full hover:bg-[#F2F2EF] flex items-center justify-center text-faint hover:text-ink">
           <Icon.x className="w-4 h-4" />
         </button>
         <h2 className="text-lg font-semibold">Add client</h2>
         <p className="text-[13px] text-muted mt-0.5">They will appear in your client list right away.</p>
+
+        {/* Avatar: photo or colored initials */}
+        <div className="flex items-center gap-3.5 mt-4">
+          <button onClick={() => fileRef.current?.click()} className="relative group rounded-[16px] overflow-hidden shrink-0" style={{ width: 48, height: 48 }} title="Add photo">
+            <Avatar initials={previewInitials || "?"} color={color} photo={photo} size={48} />
+            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/35 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"><Icon.pencil className="w-4 h-4" /></span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {PALETTE.map((c) => (
+                <button key={c} onClick={() => setColor(c)} className={cx("w-6 h-6 rounded-full transition-transform", color === c && !photo && "ring-2 ring-offset-2 ring-ink scale-110")} style={{ background: c }} aria-label="Pick color" />
+              ))}
+            </div>
+            <div className="text-[11px] text-faint mt-1.5">{photo ? <button onClick={() => setPhoto(null)} className="text-accent">Remove photo</button> : "Pick a color, or tap the circle to add a photo"}</div>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+        </div>
 
         <div className="space-y-3 mt-4">
           <div>
@@ -160,7 +194,7 @@ function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: 
 
         <div className="flex justify-end gap-2 mt-5">
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn onClick={() => valid && onSave({ name, email, phone, tag, note })} className={valid ? "" : "opacity-50 pointer-events-none"}>Add client</Btn>
+          <Btn onClick={() => valid && onSave({ name, email, phone, tag, note, color, photo })} className={valid ? "" : "opacity-50 pointer-events-none"}>Add client</Btn>
         </div>
       </div>
     </div>

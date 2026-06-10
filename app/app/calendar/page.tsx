@@ -8,8 +8,16 @@ import { dnum, dow, to12, toMin } from "@/lib/format";
 
 const DAYS = ["2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14"];
 const ROW = 56; // px per hour
-const START_OPTS = [6, 7, 8, 9, 10, 11];
-const END_OPTS = [15, 16, 17, 18, 19, 20, 21, 22];
+const START_OPTS = Array.from({ length: 24 }, (_, i) => i); // 12 AM … 11 PM
+const END_OPTS = Array.from({ length: 24 }, (_, i) => i + 1); // 1 AM … 12 AM (midnight)
+
+// Label an hour 0–24, where 0 and 24 are both midnight.
+function hourLabel(h: number): string {
+  const hh = ((h % 24) + 24) % 24;
+  const ap = hh < 12 ? "AM" : "PM";
+  const disp = hh % 12 === 0 ? 12 : hh % 12;
+  return `${disp} ${ap}`;
+}
 
 export default function CalendarPage() {
   const { openSession } = useOverlays();
@@ -72,11 +80,11 @@ export default function CalendarPage() {
           <div className="flex items-center gap-1.5 text-[12px] text-muted">
             <span>Day:</span>
             <select value={dayStart} onChange={(e) => changeStart(Number(e.target.value))} className="h-7 rounded-[8px] border border-line bg-surface px-1.5 text-[12px] outline-none focus:border-accent">
-              {START_OPTS.map((h) => <option key={h} value={h}>{to12(h + ":00")}</option>)}
+              {START_OPTS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
             </select>
             <span>to</span>
             <select value={dayEnd} onChange={(e) => changeEnd(Number(e.target.value))} className="h-7 rounded-[8px] border border-line bg-surface px-1.5 text-[12px] outline-none focus:border-accent">
-              {END_OPTS.map((h) => <option key={h} value={h}>{to12(h + ":00")}</option>)}
+              {END_OPTS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
             </select>
           </div>
         )}
