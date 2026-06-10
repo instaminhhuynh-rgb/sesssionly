@@ -8,6 +8,7 @@ import { useToast } from "./toast";
 import { HostAvatar, readImageScaled } from "./profile";
 import { HOST, SERVICES, getService, getSessionsForClient } from "@/lib/mock-data";
 import { fmtDay, to12 } from "@/lib/format";
+import { detectLocation, mapsUrl, appleMapsUrl, wazeUrl, smsHref, isUrl, type LocationType } from "@/lib/location";
 import { scoreReasons, scoreBand } from "@/lib/session-score";
 
 /** Shape returned by POST /api/session-score (kept local so no server module is imported into the client bundle). */
@@ -267,6 +268,15 @@ function SessionDetail({ session: s, onClose, onOpenClient }: { session: Enriche
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Location & directions.
+  const initLoc = detectLocation(s.location);
+  const [locType, setLocType] = useState<LocationType>(initLoc.type);
+  const [locValue, setLocValue] = useState(initLoc.value);
+  const [editLoc, setEditLoc] = useState(false);
+  function copyLoc() {
+    try { navigator.clipboard.writeText(locValue); toast("Copied"); } catch { toast("Copy failed"); }
+  }
+
   // Live values come from the agent once it has run; otherwise the seeded score.
   const score = ai?.score ?? s.score;
   const pos = ai?.reasons.positive ?? base.pos;
@@ -339,7 +349,7 @@ function SessionDetail({ session: s, onClose, onOpenClient }: { session: Enriche
         <Avatar initials={s.client.initials} color={s.client.color} photo={s.client.photo} size={48} />
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-lg">{s.client.name}</div>
-          <div className="text-[13px] text-muted">{s.service.name} · {fmtDay(s.day)} · {to12(s.start)} to {to12(s.end)} · {s.location}</div>
+          <div className="text-[13px] text-muted">{s.service.name} · {fmtDay(s.day)} · {to12(s.start)} to {to12(s.end)}</div>
         </div>
       </div>
 
@@ -389,6 +399,49 @@ function SessionDetail({ session: s, onClose, onOpenClient }: { session: Enriche
         ) : null}
 
         {ai && <p className="text-[11px] text-faint mt-3">Updated just now</p>}
+      </Card>
+
+      <Card className="!p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-[12px] font-semibold text-faint uppercase">Location</div>
+          <button onClick={() => setEditLoc((v) => !v)} className="text-[12px] text-accent font-medium">{editLoc ? "Done" : "Edit"}</button>
+        </div>
+        {editLoc ? (
+          <div className="space-y-2">
+            <Segmented<LocationType> size="sm" value={locType} onChange={setLocType} options={[{ value: "inperson", label: "In person" }, { value: "virtual", label: "Virtual" }, { value: "phone", label: "Phone" }]} />
+            <input value={locValue} onChange={(e) => setLocValue(e.target.value)} placeholder={locType === "inperson" ? "Street address" : locType === "virtual" ? "Video link (Zoom, Meet…)" : "Phone number"} className="inp !text-[13px]" />
+            <div className="flex justify-end"><Btn size="sm" onClick={() => { setEditLoc(false); toast("Location saved"); }}>Save</Btn></div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Pill tone={locType === "inperson" ? "info" : "neutral"}>{locType === "inperson" ? "In person" : locType === "virtual" ? "Virtual" : "Phone"}</Pill>
+              <span className="text-[13px] text-ink/90 truncate">{locValue || "No location set"}</span>
+            </div>
+            {locValue && locType === "inperson" && (
+              <div className="flex flex-wrap gap-1.5">
+                <a href={mapsUrl(locValue)} target="_blank" rel="noreferrer" className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-ink text-white hover:bg-black">Open in Maps</a>
+                <a href={appleMapsUrl(locValue)} target="_blank" rel="noreferrer" className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-white text-ink border border-line hover:bg-[#FAFAF8]">Apple</a>
+                <a href={wazeUrl(locValue)} target="_blank" rel="noreferrer" className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-white text-ink border border-line hover:bg-[#FAFAF8]">Waze</a>
+                <Btn size="sm" variant="secondary" onClick={copyLoc}>Copy</Btn>
+                <a href={smsHref(`Address for our session: ${locValue}\nDirections: ${mapsUrl(locValue)}`)} className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-white text-ink border border-line hover:bg-[#FAFAF8]">Text to client</a>
+              </div>
+            )}
+            {locValue && locType === "virtual" && (
+              <div className="flex flex-wrap gap-1.5">
+                {isUrl(locValue) && <a href={locValue} target="_blank" rel="noreferrer" className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-ink text-white hover:bg-black">Open link</a>}
+                <Btn size="sm" variant="secondary" onClick={copyLoc}>Copy link</Btn>
+                <a href={smsHref(`Here's the link for our session: ${locValue}`)} className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-white text-ink border border-line hover:bg-[#FAFAF8]">Text to client</a>
+              </div>
+            )}
+            {locValue && locType === "phone" && (
+              <div className="flex flex-wrap gap-1.5">
+                <a href={`tel:${locValue.replace(/[^+\d]/g, "")}`} className="inline-flex items-center h-8 px-3 rounded-[10px] text-[13px] font-medium bg-ink text-white hover:bg-black">Call</a>
+                <Btn size="sm" variant="secondary" onClick={copyLoc}>Copy</Btn>
+              </div>
+            )}
+          </>
+        )}
       </Card>
 
       <div className="grid grid-cols-3 gap-2 mb-4">

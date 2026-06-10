@@ -178,7 +178,7 @@ function Content({ item, toast, onClose }: { item: Item; toast: (m: string) => v
       return (
         <div className="space-y-3">
           <Lead>Every appointment is on-site, virtual, or by phone. For on-site, Sessionly holds the address.</Lead>
-          {[["On-site", "An address. One-tap directions are coming next."], ["Virtual", "A video link (Zoom, Meet)."], ["Phone", "A number to call."]].map(([n, d]) => (
+          {[["On-site", "An address, with one-tap directions from any session."], ["Virtual", "A video link (Zoom, Meet)."], ["Phone", "A number to call."]].map(([n, d]) => (
             <Card key={n} className="!p-3.5"><div className="text-[13px] font-medium">{n}</div><div className="text-[12px] text-muted">{d}</div></Card>
           ))}
           <div className="flex items-center gap-2 pt-1"><Soon /><span className="text-[12px] text-muted">Travel-aware scheduling & buffers</span></div>
