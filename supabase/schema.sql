@@ -41,12 +41,22 @@ create table if not exists clients (
   name           text not null,
   email          text,
   phone          text,
+  address        text,
   tag            text not null default 'New lead',  -- Repeat | Package | At risk | Overdue | New lead
+  color          text not null default '#3E5C76',
+  photo          text,
+  since          text,
   prefs          text[] not null default '{}',
   lifetime_cents integer not null default 0,
   created_at     timestamptz not null default now()
 );
 create index if not exists clients_host_idx on clients (host_id);
+
+-- If you ran an earlier version of this schema, this backfills the new columns:
+alter table clients add column if not exists address text;
+alter table clients add column if not exists color text not null default '#3E5C76';
+alter table clients add column if not exists photo text;
+alter table clients add column if not exists since text;
 
 -- ───────────────────────────────────────────────────────────────────
 -- services
@@ -180,14 +190,16 @@ begin
   end loop;
 end $$;
 
--- Optional: create the hosts row automatically when a user signs up.
-create or replace function handle_new_user()
+-- Create the hosts row automatically when a user signs up.
+-- `set search_path = public` is required so the function can find public.hosts.
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
+set search_path = public
 as $$
 begin
-  insert into hosts (auth_user_id, first_name)
+  insert into public.hosts (auth_user_id, first_name)
   values (new.id, coalesce(new.raw_user_meta_data->>'first_name', ''));
   return new;
 end $$;

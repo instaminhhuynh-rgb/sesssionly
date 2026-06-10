@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Btn, Card, Pill, SectionTitle, Segmented, Toggle, cx } from "@/components/ui";
+import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 import { Icon } from "@/components/icons";
 import { PageIntro } from "@/components/page-intro";
 import { useToast } from "@/components/toast";
@@ -26,7 +28,13 @@ function Row({ label, desc, children }: { label: string; desc?: string; children
 
 export default function SettingsPage() {
   const toast = useToast();
+  const router = useRouter();
   const { photo, setPhoto, host, setHost, bookingPage, setBookingPage } = useProfile();
+  async function signOut() {
+    try { await createClient().auth.signOut(); } catch { /* ignore */ }
+    router.push("/login");
+    router.refresh();
+  }
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -122,8 +130,11 @@ export default function SettingsPage() {
           <button onClick={() => coverRef.current?.click()} className="block w-full h-28 rounded-[12px] overflow-hidden border border-line relative" style={{ background: bookingPage.coverPhoto ? undefined : "#2B3A4A" }}>
             {bookingPage.coverPhoto ? <img src={bookingPage.coverPhoto} alt="" className="w-full h-full object-cover" /> : <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[13px]">Tap to add a cover photo</span>}
           </button>
-          <input ref={coverRef} type="file" accept="image/*" onChange={onPickCover} className="hidden" />
-          {bookingPage.coverPhoto && <button onClick={() => setBookingPage({ ...bookingPage, coverPhoto: null })} className="text-[12px] text-accent mt-1">Remove cover</button>}
+          <input ref={coverRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={onPickCover} className="hidden" />
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[11px] text-faint">JPG, PNG, or WebP. A wide (landscape) photo looks best.</span>
+            {bookingPage.coverPhoto && <button onClick={() => setBookingPage({ ...bookingPage, coverPhoto: null })} className="text-[12px] text-accent">Remove</button>}
+          </div>
         </div>
         <div>
           <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Intro video</div>
@@ -144,7 +155,7 @@ export default function SettingsPage() {
             ))}
             {bookingPage.gallery.length < 6 && <button onClick={() => galleryRef.current?.click()} className="aspect-square rounded-[8px] border border-dashed border-line flex items-center justify-center text-faint hover:text-ink hover:bg-[#FAFAF8]"><Icon.plus className="w-5 h-5" /></button>}
           </div>
-          <input ref={galleryRef} type="file" accept="image/*" multiple onChange={onPickGallery} className="hidden" />
+          <input ref={galleryRef} type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={onPickGallery} className="hidden" />
         </div>
         <a href={`/book/${host.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent font-medium">View your booking page →</a>
       </Group>
@@ -195,6 +206,12 @@ export default function SettingsPage() {
         <Row label="Reduce motion"><Toggle on={t.reduceMotion} onClick={() => tog("reduceMotion")} /></Row>
         <Row label="Session Score visibility" desc="Host-only for now. Clients never see scores."><Pill tone="info">Host-only</Pill></Row>
         <Row label="Export my data"><Btn size="sm" variant="secondary" onClick={() => toast("Data export is coming soon")}>Request export</Btn></Row>
+      </Group>
+
+      <Group title="Account">
+        {supabaseConfigured
+          ? <Row label="Sign out" desc="End your session on this device."><Btn size="sm" variant="secondary" onClick={signOut}>Sign out</Btn></Row>
+          : <Row label="Accounts" desc="Running in demo mode. Add Supabase keys to turn on sign-in."><Pill tone="neutral">Demo mode</Pill></Row>}
       </Group>
     </div>
   );

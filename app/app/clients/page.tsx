@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, Btn, Card, Pill, ScoreRing, Segmented, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { useOverlays } from "@/components/overlays";
 import { useToast } from "@/components/toast";
 import { PageIntro } from "@/components/page-intro";
 import { readImageScaled } from "@/components/profile";
-import { getClients } from "@/lib/mock-data";
+import { listClients, addClient as addClientToStore, clientsAreLive, type NewClientInput } from "@/lib/data/clients";
 import type { Client, ClientTag } from "@/lib/types";
 
 const PALETTE = ["#3E5C76", "#5B8266", "#A6794C", "#7A5C8E", "#B45309", "#2F6F6A"];
@@ -22,8 +22,18 @@ export default function ClientsPage() {
   const toast = useToast();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "attention" | "repeat">("all");
-  const [clients, setClients] = useState<Client[]>(() => getClients());
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    listClients()
+      .then((c) => { if (active) setClients(c); })
+      .catch(() => { if (active) toast("Could not load clients"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [toast]);
 
   const filtered = clients.filter((c) => {
     const m = c.name.toLowerCase().includes(q.toLowerCase());
@@ -34,36 +44,15 @@ export default function ClientsPage() {
     return m && f;
   });
 
-  function addClient(data: { name: string; email: string; phone: string; address: string; tag: ClientTag; note: string; color: string; photo: string | null }) {
-    const now = new Date();
-    const client: Client = {
-      id: "cl_" + now.getTime(),
-      name: data.name.trim(),
-      initials: initialsOf(data.name),
-      email: data.email.trim(),
-      phone: data.phone.trim(),
-      address: data.address.trim(),
-      tag: data.tag,
-      since: now.toISOString().slice(0, 7),
-      sessions: 0,
-      cancellations: 0,
-      noShows: 0,
-      balance: 0,
-      depositHeld: 0,
-      lastSeen: "Just added",
-      nextLabel: "—",
-      avgScore: 60,
-      lifetime: 0,
-      color: data.color,
-      photo: data.photo,
-      prefs: [],
-      notes: data.note.trim() ? [{ d: "Today", t: data.note.trim() }] : [],
-      reviews: [],
-      payments: [],
-    };
-    setClients((prev) => [client, ...prev]);
-    setAdding(false);
-    toast(`Added ${client.name}`);
+  async function addClient(data: NewClientInput) {
+    try {
+      const client = await addClientToStore(data);
+      setClients((prev) => [client, ...prev]);
+      setAdding(false);
+      toast(clientsAreLive ? `Saved ${client.name}` : `Added ${client.name}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save client");
+    }
   }
 
   return (
@@ -72,7 +61,7 @@ export default function ClientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Clients</h1>
-          <p className="text-sm text-muted">{clients.length} people · relationship memory, history, reviews and payments in one place</p>
+          <p className="text-sm text-muted">{loading ? "Loading…" : `${clients.length} ${clients.length === 1 ? "person" : "people"}`} · {clientsAreLive ? "saved to your account" : "relationship memory in one place"}</p>
         </div>
         <div className="flex gap-2">
           <Btn variant="secondary" onClick={() => toast("Contact import is coming soon")}>Import contacts</Btn>
@@ -85,6 +74,11 @@ export default function ClientsPage() {
         <Segmented<"all" | "attention" | "repeat"> value={filter} onChange={setFilter} size="sm" options={[{ value: "all", label: "All" }, { value: "attention", label: "Needs attention" }, { value: "repeat", label: "Repeat" }]} />
       </div>
 
+      {loading ? (
+        <p className="text-[13px] text-faint py-6">Loading your clients…</p>
+      ) : filtered.length === 0 ? (
+        <div className="text-center text-[13px] text-faint py-10 border border-dashed border-line rounded-[12px]">{clients.length === 0 ? "No clients yet. Add your first one." : "No clients match your search."}</div>
+      ) : (
       <div className="grid sm:grid-cols-2 gap-3">
         {filtered.map((c) => (
           <button key={c.id} onClick={() => openClient(c)} className="text-left">
@@ -106,6 +100,7 @@ export default function ClientsPage() {
           </button>
         ))}
       </div>
+      )}
 
       {adding && <AddClientModal onClose={() => setAdding(false)} onSave={addClient} />}
     </div>
