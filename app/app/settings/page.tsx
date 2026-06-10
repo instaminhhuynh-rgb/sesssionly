@@ -26,10 +26,25 @@ function Row({ label, desc, children }: { label: string; desc?: string; children
 
 export default function SettingsPage() {
   const toast = useToast();
-  const { photo, setPhoto, host, setHost } = useProfile();
+  const { photo, setPhoto, host, setHost, bookingPage, setBookingPage } = useProfile();
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [pf, setPf] = useState(host);
+  async function onPickCover(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try { setBookingPage({ ...bookingPage, coverPhoto: await readImageScaled(f, 1000) }); toast("Cover updated"); } catch { toast("Could not load that image"); }
+  }
+  async function onPickGallery(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    const imgs: string[] = [];
+    for (const f of files) { try { imgs.push(await readImageScaled(f, 600)); } catch { /* skip */ } }
+    if (imgs.length) setBookingPage({ ...bookingPage, gallery: [...bookingPage.gallery, ...imgs].slice(0, 6) });
+  }
   async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
@@ -98,6 +113,40 @@ export default function SettingsPage() {
             <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={() => setEditingProfile(false)}>Cancel</Btn><Btn size="sm" onClick={() => { setHost(pf); setEditingProfile(false); toast("Profile saved"); }}>Save</Btn></div>
           </div>
         )}
+      </Group>
+
+      <Group title="Your booking page">
+        <p className="text-[13px] text-muted">What clients see at sessionly.com/{host.slug}. Add a cover, a short intro video, a bio, and photos of your work.</p>
+        <div>
+          <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Cover photo</div>
+          <button onClick={() => coverRef.current?.click()} className="block w-full h-28 rounded-[12px] overflow-hidden border border-line relative" style={{ background: bookingPage.coverPhoto ? undefined : "#2B3A4A" }}>
+            {bookingPage.coverPhoto ? <img src={bookingPage.coverPhoto} alt="" className="w-full h-full object-cover" /> : <span className="absolute inset-0 flex items-center justify-center text-white/80 text-[13px]">Tap to add a cover photo</span>}
+          </button>
+          <input ref={coverRef} type="file" accept="image/*" onChange={onPickCover} className="hidden" />
+          {bookingPage.coverPhoto && <button onClick={() => setBookingPage({ ...bookingPage, coverPhoto: null })} className="text-[12px] text-accent mt-1">Remove cover</button>}
+        </div>
+        <div>
+          <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Intro video</div>
+          <input value={bookingPage.videoUrl} onChange={(e) => setBookingPage({ ...bookingPage, videoUrl: e.target.value })} placeholder="Paste a YouTube, Vimeo, or .mp4 link" className="inp !text-[13px]" />
+        </div>
+        <div>
+          <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Bio</div>
+          <textarea value={bookingPage.bio} onChange={(e) => setBookingPage({ ...bookingPage, bio: e.target.value })} rows={3} placeholder="A few lines about you and what you do." className="inp !text-[13px] resize-none" />
+        </div>
+        <div>
+          <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Photos of your work</div>
+          <div className="grid grid-cols-4 gap-2">
+            {bookingPage.gallery.map((g, i) => (
+              <div key={i} className="relative group aspect-square">
+                <img src={g} alt="" className="w-full h-full object-cover rounded-[8px]" />
+                <button onClick={() => setBookingPage({ ...bookingPage, gallery: bookingPage.gallery.filter((_, idx) => idx !== i) })} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/55 text-white flex items-center justify-center opacity-0 group-hover:opacity-100"><Icon.x className="w-3 h-3" /></button>
+              </div>
+            ))}
+            {bookingPage.gallery.length < 6 && <button onClick={() => galleryRef.current?.click()} className="aspect-square rounded-[8px] border border-dashed border-line flex items-center justify-center text-faint hover:text-ink hover:bg-[#FAFAF8]"><Icon.plus className="w-5 h-5" /></button>}
+          </div>
+          <input ref={galleryRef} type="file" accept="image/*" multiple onChange={onPickGallery} className="hidden" />
+        </div>
+        <a href={`/book/${host.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent font-medium">View your booking page →</a>
       </Group>
 
       <Group title="Style Studio">

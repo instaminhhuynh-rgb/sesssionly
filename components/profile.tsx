@@ -32,15 +32,26 @@ const DEFAULT_HOST: HostInfo = {
   slug: HOST.slug,
 };
 
+export interface BookingPage {
+  coverPhoto: string | null;
+  videoUrl: string;
+  bio: string;
+  gallery: string[];
+}
+const DEFAULT_BOOKING: BookingPage = { coverPhoto: null, videoUrl: "", bio: "", gallery: [] };
+
 interface ProfileCtx {
   photo: string | null;
   setPhoto: (p: string | null) => void;
   host: HostInfo;
   setHost: (h: HostInfo) => void;
+  bookingPage: BookingPage;
+  setBookingPage: (b: BookingPage) => void;
 }
-const Ctx = createContext<ProfileCtx>({ photo: null, setPhoto: () => {}, host: DEFAULT_HOST, setHost: () => {} });
+const Ctx = createContext<ProfileCtx>({ photo: null, setPhoto: () => {}, host: DEFAULT_HOST, setHost: () => {}, bookingPage: DEFAULT_BOOKING, setBookingPage: () => {} });
 const KEY = "sessionly_avatar";
 const HOST_KEY = "sessionly_host";
+const BOOKING_KEY = "sessionly_bookingpage";
 
 export function useProfile(): ProfileCtx {
   return useContext(Ctx);
@@ -49,6 +60,7 @@ export function useProfile(): ProfileCtx {
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [photo, setPhotoState] = useState<string | null>(null);
   const [host, setHostState] = useState<HostInfo>(DEFAULT_HOST);
+  const [bookingPage, setBookingPageState] = useState<BookingPage>(DEFAULT_BOOKING);
 
   useEffect(() => {
     try {
@@ -56,6 +68,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       if (v) setPhotoState(v);
       const h = localStorage.getItem(HOST_KEY);
       if (h) setHostState({ ...DEFAULT_HOST, ...JSON.parse(h) });
+      const b = localStorage.getItem(BOOKING_KEY);
+      if (b) setBookingPageState({ ...DEFAULT_BOOKING, ...JSON.parse(b) });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setBookingPage = useCallback((b: BookingPage) => {
+    setBookingPageState(b);
+    try {
+      localStorage.setItem(BOOKING_KEY, JSON.stringify(b));
     } catch {
       /* ignore */
     }
@@ -80,7 +103,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <Ctx.Provider value={{ photo, setPhoto, host, setHost }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ photo, setPhoto, host, setHost, bookingPage, setBookingPage }}>{children}</Ctx.Provider>;
 }
 
 /** The host's avatar: their uploaded photo, or their initials as a fallback. */
