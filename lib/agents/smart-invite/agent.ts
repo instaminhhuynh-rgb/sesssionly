@@ -27,7 +27,7 @@ const TOOL = {
   input_schema: {
     type: "object" as const,
     properties: {
-      body: { type: "string", description: "The invite message. Warm, short, personal. Sign off as Minh." },
+      body: { type: "string", description: "The invite message. Warm, short, personal. End with the sign-off token {{sender}} on its own final line." },
     },
     required: ["body"],
   },
@@ -56,7 +56,7 @@ export async function draftInvite(input: InviteInput): Promise<InviteDraft> {
     const msg = await client.messages.create({
       model: SCORING_MODEL,
       max_tokens: 500,
-      system: `${spec.systemPrompt}\n\nWrite a short, warm invite (4-6 lines). Offer the suggested times. If a deposit is required, mention it briefly and reassuringly. Include the booking link. Sign off as "Minh". Call submit_invite.`,
+      system: `${spec.systemPrompt}\n\nWrite a short, warm invite (4-6 lines). Offer the suggested times. If a deposit is required, mention it briefly and reassuringly. Include the booking link. End with the sign-off token "{{sender}}" on its own final line. Call submit_invite.`,
       tools: [TOOL],
       tool_choice: { type: "tool", name: TOOL.name },
       messages: [{ role: "user", content: `Write the invite. Context:\n${JSON.stringify(signals, null, 2)}` }],
@@ -83,7 +83,7 @@ export function template(input: InviteInput, serviceName: string, deposit: numbe
     input.reqIntake ? `There's a quick intake so I can prepare. It takes about two minutes.` : "",
     `Pick a time here: sessionly.com/${HOST.slug}/invite`,
     ``,
-    `Minh`,
+    `{{sender}}`,
   ].filter((l) => l !== "");
   return { body: lines.join("\n"), source: "template" };
 }

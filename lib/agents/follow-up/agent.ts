@@ -30,7 +30,7 @@ const TOOL = {
     type: "object" as const,
     properties: {
       subject: { type: "string", description: "Email subject line. Omit or empty for SMS-style messages.", maxLength: 80 },
-      body: { type: "string", description: "The message body. Warm, concrete, short. Sign off as Minh." },
+      body: { type: "string", description: "The message body. Warm, concrete, short. End with the sign-off token {{sender}}." },
     },
     required: ["body"],
   },
@@ -51,7 +51,7 @@ export async function draftFollowUp(bookingId: string, kind: FollowUpKind): Prom
     const msg = await client.messages.create({
       model: SCORING_MODEL,
       max_tokens: 600,
-      system: `${spec.systemPrompt}\n\nWrite a ${kind} message. Goal: ${signals.kindGoal} Keep it short (3-5 sentences), specific to this client and session, and human. Use {{booking_link}} or {{review_link}} as placeholders where a link belongs. Sign off as "Minh". Call submit_follow_up.`,
+      system: `${spec.systemPrompt}\n\nWrite a ${kind} message. Goal: ${signals.kindGoal} Keep it short (3-5 sentences), specific to this client and session, and human. Use {{booking_link}} or {{review_link}} as placeholders where a link belongs. End with the sign-off token "{{sender}}". Call submit_follow_up.`,
       tools: [TOOL],
       tool_choice: { type: "tool", name: TOOL.name },
       messages: [{ role: "user", content: `Draft the message. Context:\n${JSON.stringify(signals, null, 2)}` }],
@@ -81,18 +81,18 @@ export function template(s: EnrichedSession, kind: FollowUpKind, channel: Follow
   switch (kind) {
     case "recap":
       subject = `Recap from our ${s.service.name.toLowerCase()}`;
-      body = `Hi ${first}, that was a really good session. Quick recap so it stays fresh. We made real progress, and your next step is to put it into practice this week. Reply here if anything comes up before we talk again.\n\nTalk soon,\nMinh`;
+      body = `Hi ${first}, that was a really good session. Quick recap so it stays fresh. We made real progress, and your next step is to put it into practice this week. Reply here if anything comes up before we talk again.\n\nTalk soon,\n{{sender}}`;
       break;
     case "review":
       subject = `A quick favor, ${first}?`;
-      body = `Hi ${first}, I've really enjoyed working with you. If the sessions have been useful, a short review would mean a lot to me and helps other people find me. You can leave one here whenever you have a minute: {{review_link}}. No pressure at all, and thank you.\n\nMinh`;
+      body = `Hi ${first}, I've really enjoyed working with you. If the sessions have been useful, a short review would mean a lot to me and helps other people find me. You can leave one here whenever you have a minute: {{review_link}}. No pressure at all, and thank you.\n\n{{sender}}`;
       break;
     case "rebook":
-      body = `Hi ${first}, want to keep the momentum going? I have a couple of openings next week. Grab whichever works for you: {{booking_link}}. Talk soon, Minh`;
+      body = `Hi ${first}, want to keep the momentum going? I have a couple of openings next week. Grab whichever works for you: {{booking_link}}. Talk soon, {{sender}}`;
       break;
     case "renewal":
       subject = `Your package is wrapping up`;
-      body = `Hi ${first}, your current package is almost used up. Want me to roll you into the next one and hold your usual slot? Just say the word and I'll take care of it.\n\nMinh`;
+      body = `Hi ${first}, your current package is almost used up. Want me to roll you into the next one and hold your usual slot? Just say the word and I'll take care of it.\n\n{{sender}}`;
       break;
   }
 

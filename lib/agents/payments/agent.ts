@@ -30,7 +30,7 @@ const TOOL = {
     type: "object" as const,
     properties: {
       subject: { type: "string", maxLength: 80 },
-      body: { type: "string", description: "The reminder body. Polite, clear about amount and what it's for. Sign off as Minh." },
+      body: { type: "string", description: "The reminder body. Polite, clear about amount and what it's for. End with the sign-off token {{sender}}." },
       tone: { type: "string", enum: ["gentle", "firm"] },
     },
     required: ["body", "tone"],
@@ -57,7 +57,7 @@ export async function draftReminder(input: ReminderInput): Promise<ReminderDraft
     const msg = await client.messages.create({
       model: SCORING_MODEL,
       max_tokens: 450,
-      system: `${spec.systemPrompt}\n\nDraft a short payment reminder. Be ${reliable ? "warm and gentle, assuming the best" : "polite but firm and clear about next steps"}. State the amount and what it's for. Offer an easy way to pay. Sign off as "Minh". Call submit_reminder.`,
+      system: `${spec.systemPrompt}\n\nDraft a short payment reminder. Be ${reliable ? "warm and gentle, assuming the best" : "polite but firm and clear about next steps"}. State the amount and what it's for. Offer an easy way to pay. End with the sign-off token "{{sender}}". Call submit_reminder.`,
       tools: [TOOL],
       tool_choice: { type: "tool", name: TOOL.name },
       messages: [{ role: "user", content: `Draft the reminder. Context:\n${JSON.stringify(signals, null, 2)}` }],
@@ -82,14 +82,14 @@ export function template(input: ReminderInput, reliable: boolean): ReminderDraft
   if (reliable) {
     return {
       subject: `Quick note on your invoice`,
-      body: `Hi ${first}, just a friendly nudge that the $${input.amount} for ${input.what} is still open (${input.age}). No worries at all if it slipped your mind. You can settle it here whenever you get a moment: {{pay_link}}.\n\nThanks,\nMinh`,
+      body: `Hi ${first}, just a friendly nudge that the $${input.amount} for ${input.what} is still open (${input.age}). No worries at all if it slipped your mind. You can settle it here whenever you get a moment: {{pay_link}}.\n\nThanks,\n{{sender}}`,
       tone: "gentle",
       source: "template",
     };
   }
   return {
     subject: `Payment due: ${input.what}`,
-    body: `Hi ${first}, following up on the $${input.amount} for ${input.what}, which is now ${input.age}. Please settle it here in the next day or two so we can keep things on track: {{pay_link}}. Let me know if anything is getting in the way.\n\nThanks,\nMinh`,
+    body: `Hi ${first}, following up on the $${input.amount} for ${input.what}, which is now ${input.age}. Please settle it here in the next day or two so we can keep things on track: {{pay_link}}. Let me know if anything is getting in the way.\n\nThanks,\n{{sender}}`,
     tone: "firm",
     source: "template",
   };

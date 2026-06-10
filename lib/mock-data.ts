@@ -17,14 +17,17 @@ import type {
  * those functions change, components keep calling the same API.
  */
 
+// Neutral sample identity. The live app replaces this with the host's real
+// profile; the demo starts blank (see DEMO_HOST in components/profile.tsx) so a
+// visitor never sees a stranger's name.
 export const HOST: Host = {
   id: "host_1",
-  firstName: "Minh",
-  lastName: "Huynh",
-  business: "Minh Huynh Coaching",
+  firstName: "",
+  lastName: "",
+  business: "",
   role: "Leadership & Career Coach",
-  initials: "MH",
-  slug: "minh",
+  initials: "",
+  slug: "your-name",
   timezone: "America/Los_Angeles",
 };
 
@@ -46,7 +49,7 @@ export const CLIENTS: Client[] = [
       { d: "Jun 8", t: "Session 7, mapped the promotion conversation. Felt much more confident. Wants to role-play the salary ask next time." },
       { d: "May 25", t: "Discussed manager friction. Action: send weekly update email to skip-level." },
     ],
-    reviews: [{ d: "May 2026", stars: 5, t: "Minh helped me reframe how I show up in leadership meetings. I got the promotion. Worth every dollar.", verified: true }],
+    reviews: [{ d: "May 2026", stars: 5, t: "Completely reframed how I show up in leadership meetings. I got the promotion. Worth every dollar.", verified: true }],
     payments: [{ d: "Jun 1", amt: 180, status: "Paid", what: "1:1 Coaching" }, { d: "May 18", amt: 180, status: "Paid", what: "1:1 Coaching" }],
   },
   {
@@ -109,9 +112,9 @@ export const SESSIONS: Session[] = [
 ];
 
 export const FOLLOWUPS: FollowUp[] = [
-  { id: "fu_1", clientId: "cl_elena", kind: "Recap + review request", due: "Today", context: "Strategy Intensive completed Jun 6", draft: "Hi Elena — what a session. You landed on a delegation framework you can actually use this week: name the outcome, hand over the decision, check in on the metric (not the method).\n\nTwo small asks:\n1) Try it on one project before Friday and note what felt hard.\n2) If Sessionly's been useful, a short review means a lot: {{review_link}}\n\nProud of the progress. — Minh" },
-  { id: "fu_2", clientId: "cl_marcus", kind: "Package renewal", due: "Jun 28", context: "Monthly package resets Jun 30", draft: "Hi Marcus — your June package wraps at month end and you've used 3 of 4 sessions. Want me to roll you into July? I can hold your usual Wednesday 11:00 slot. — Minh" },
-  { id: "fu_3", clientId: "cl_sarah", kind: "Rebook prompt", due: "Today", context: "Session 7 completed yesterday", draft: "Hi Sarah — great work yesterday. Next time we role-play the salary ask. I've got Friday 10:30 open if you want to lock it in: {{booking_link}} — Minh" },
+  { id: "fu_1", clientId: "cl_elena", kind: "Recap + review request", due: "Today", context: "Strategy Intensive completed Jun 6", draft: "Hi Elena — what a session. You landed on a delegation framework you can actually use this week: name the outcome, hand over the decision, check in on the metric (not the method).\n\nTwo small asks:\n1) Try it on one project before Friday and note what felt hard.\n2) If Sessionly's been useful, a short review means a lot: {{review_link}}\n\nProud of the progress. — {{sender}}" },
+  { id: "fu_2", clientId: "cl_marcus", kind: "Package renewal", due: "Jun 28", context: "Monthly package resets Jun 30", draft: "Hi Marcus — your June package wraps at month end and you've used 3 of 4 sessions. Want me to roll you into July? I can hold your usual Wednesday 11:00 slot. — {{sender}}" },
+  { id: "fu_3", clientId: "cl_sarah", kind: "Rebook prompt", due: "Today", context: "Session 7 completed yesterday", draft: "Hi Sarah — great work yesterday. Next time we role-play the salary ask. I've got Friday 10:30 open if you want to lock it in: {{booking_link}} — {{sender}}" },
 ];
 
 export const NEEDS_ATTENTION: AttentionItem[] = [

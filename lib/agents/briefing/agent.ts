@@ -79,7 +79,7 @@ function toStringArray(v: unknown, max: number): string[] {
 
 const TEMPLATE: BriefingResult = {
   paragraphs: [
-    "Good morning, Minh. You have three sessions today. They're all set except one thing. Priya's intake isn't done before her 1:00 discovery call, so I drafted a resend for you.",
+    "Good morning. You have three sessions today. They're all set except one thing. Priya's intake isn't done before her 1:00 discovery call, so I drafted a resend for you.",
     "Tomorrow's 9:00 with John Davies is your main worry. No deposit, intake incomplete, and two past cancellations. I'd ask for a deposit and a confirmation before it runs.",
     "On the money side, David Thompson is six days overdue at $180, and I've drafted a gentle reminder. You also have a 2:00 PM gap tomorrow from a cancellation, and two waitlist clients would fit it nicely.",
   ],

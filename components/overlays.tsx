@@ -5,9 +5,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { Avatar, Btn, Card, Empty, Pill, ScoreRing, Segmented, Star, Toggle, cx } from "./ui";
 import { Icon } from "./icons";
 import { useToast } from "./toast";
-import { HostAvatar, readImageScaled } from "./profile";
+import { HostAvatar, readImageScaled, useProfile } from "./profile";
 import { HOST, SERVICES, getService, getSessionsForClient } from "@/lib/mock-data";
-import { fmtDay, to12 } from "@/lib/format";
+import { fmtDay, to12, fillSender } from "@/lib/format";
 import { detectLocation, mapsUrl, appleMapsUrl, wazeUrl, smsHref, isUrl, type LocationType } from "@/lib/location";
 import { scoreReasons, scoreBand } from "@/lib/session-score";
 
@@ -130,6 +130,7 @@ function SmartInvite({ toName, onClose }: { toName?: string; onClose: () => void
   const [msg, setMsg] = useState("");
   const s = getService(serviceId)!;
   const toast = useToast();
+  const { host } = useProfile();
   const [aiLoading, setAiLoading] = useState(false);
 
   async function writeWithAI() {
@@ -141,7 +142,7 @@ function SmartInvite({ toName, onClose }: { toName?: string; onClose: () => void
         body: JSON.stringify({ recipient, serviceId, reqDeposit, reqIntake }),
       });
       const data = await res.json();
-      if (res.ok && data.body) setMsg(data.body);
+      if (res.ok && data.body) setMsg(fillSender(data.body, host.firstName));
     } catch {
       /* keep the client-side draft on failure */
     } finally {
@@ -159,11 +160,11 @@ function SmartInvite({ toName, onClose }: { toName?: string; onClose: () => void
       `  • Mon Jun 15, 9:00 AM`,
       reqDeposit && s.deposit ? `A $${s.deposit} deposit holds your spot (applied to the $${s.price} total).` : null,
       reqIntake ? `There's a quick intake so I can prepare — takes 2 minutes.` : null,
-      `Pick a time here: sessionly.com/${HOST.slug}/invite\n\n${HOST.firstName}`,
+      `Pick a time here: sessionly.com/${host.slug}/invite\n\n${host.firstName || "[Your name]"}`,
     ]
       .filter(Boolean)
       .join("\n");
-  }, [recipient, reqDeposit, reqIntake, s]);
+  }, [recipient, reqDeposit, reqIntake, s, host.slug, host.firstName]);
 
   const text = msg || generated;
   const ch = (k: keyof typeof channels) => setChannels((o) => ({ ...o, [k]: !o[k] }));
@@ -234,7 +235,7 @@ function SmartInvite({ toName, onClose }: { toName?: string; onClose: () => void
             <div className="bg-white rounded-[12px] border border-line p-4 shadow-sm">
               <div className="flex items-center gap-2.5 pb-3 border-b border-line">
                 <HostAvatar size={36} />
-                <div><div className="text-sm font-semibold">{HOST.firstName} {HOST.lastName}</div><div className="text-[11px] text-faint">{HOST.business}</div></div>
+                <div><div className="text-sm font-semibold">{host.firstName || host.lastName ? `${host.firstName} ${host.lastName}`.trim() : "Your name"}</div><div className="text-[11px] text-faint">{host.business || "Your business"}</div></div>
               </div>
               <pre className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink/90 mt-3 font-sans">{text}</pre>
               <div className="mt-3">
@@ -263,6 +264,7 @@ function StateCard({ ok, label, okText, badText }: { ok: boolean; label: string;
 function SessionDetail({ session: s, onClose, onOpenClient }: { session: EnrichedSession; onClose: () => void; onOpenClient: (c: Client) => void }) {
   const base = scoreReasons(s);
   const toast = useToast();
+  const { host } = useProfile();
   const [prep, setPrep] = useState(s.prep);
   const [ai, setAi] = useState<AiScore | null>(null);
   const [loading, setLoading] = useState(false);
@@ -323,7 +325,10 @@ function SessionDetail({ session: s, onClose, onOpenClient }: { session: Enriche
       });
       const data = await res.json();
       if (!res.ok || data.error) setFuErr(data.error || "Draft failed.");
-      else setFu(data as FollowUpDraft);
+      else {
+        const d = data as FollowUpDraft;
+        setFu({ ...d, body: fillSender(d.body, host.firstName), subject: d.subject ? fillSender(d.subject, host.firstName) : d.subject });
+      }
     } catch {
       setFuErr("Could not reach the follow-up agent.");
     } finally {

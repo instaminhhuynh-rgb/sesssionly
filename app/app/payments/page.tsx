@@ -5,6 +5,8 @@ import { Btn, Card, Pill, SectionTitle, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { useToast } from "@/components/toast";
 import { PageIntro } from "@/components/page-intro";
+import { useProfile } from "@/components/profile";
+import { fillSender } from "@/lib/format";
 import { OUTSTANDING, DEPOSITS_HELD, RECENT_PAID, REVENUE_WEEKS, WEEK_LABELS } from "@/lib/mock-data";
 
 interface ReminderDraft {
@@ -18,6 +20,7 @@ interface ReminderDraft {
 
 export default function PaymentsPage() {
   const toast = useToast();
+  const { host } = useProfile();
   const max = Math.max(...REVENUE_WEEKS);
   const [drafts, setDrafts] = useState<ReminderDraft[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,7 +38,8 @@ export default function PaymentsPage() {
             body: JSON.stringify({ client: p.client, what: p.what, amount: p.amt, status: p.status, age: p.age }),
           });
           const data = await res.json();
-          return { client: p.client, ...data } as ReminderDraft;
+          const d = { client: p.client, ...data } as ReminderDraft;
+          return { ...d, body: fillSender(d.body, host.firstName), subject: d.subject ? fillSender(d.subject, host.firstName) : d.subject };
         }),
       );
       setDrafts(results);

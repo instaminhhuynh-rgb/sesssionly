@@ -71,7 +71,7 @@ export default function BookPage() {
         {/* Header */}
         <div className="px-5">
           <div className="-mt-10 mb-3"><Avatar initials={initials} photo={avatar} size={80} ring /></div>
-          <h1 className="text-xl font-semibold tracking-tight">{host.business || `${host.firstName} ${host.lastName}`}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{host.business || `${host.firstName} ${host.lastName}`.trim() || "Your booking page"}</h1>
           {host.role && <p className="text-[13px] text-muted mt-0.5">{host.role}</p>}
           {bio && <p className="text-[14px] text-ink/85 leading-relaxed mt-3">{bio}</p>}
 

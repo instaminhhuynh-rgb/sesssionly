@@ -29,3 +29,13 @@ export function fmtDay(d: string, today = "2026-06-09"): string {
 export function money(n: number): string {
   return "$" + n.toLocaleString();
 }
+
+/**
+ * Replaces the {{sender}} sign-off token in a drafted message with the host's
+ * name. Falls back to a neutral placeholder so a demo visitor who hasn't
+ * personalized never sees someone else's name in a draft.
+ */
+export function fillSender(text: string, firstName?: string): string {
+  const name = firstName && firstName.trim() ? firstName.trim() : "[Your name]";
+  return text.replace(/\{\{\s*sender\s*\}\}/g, name);
+}

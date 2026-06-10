@@ -22,7 +22,7 @@ interface Briefing {
 }
 
 const DEFAULT_PARAS = [
-  "Good morning, Minh. You have three sessions today. They're all set except one thing. Priya's intake isn't done before her 1:00 discovery call, so I drafted a resend for you.",
+  "Good morning. You have three sessions today. They're all set except one thing. Priya's intake isn't done before her 1:00 discovery call, so I drafted a resend for you.",
   "Tomorrow's 9:00 with John Davies is your main worry. No deposit, intake incomplete, and two past cancellations. I'd ask for a deposit and a confirmation before it runs.",
   "On the money side, David Thompson is six days overdue at $180, and I've drafted a gentle reminder. You also have a 2:00 PM gap tomorrow from a cancellation, and two waitlist clients would fit it nicely.",
 ];
@@ -40,7 +40,11 @@ export default function TodayPage() {
   const [brief, setBrief] = useState<Briefing | null>(null);
   const [bLoading, setBLoading] = useState(false);
   const [bErr, setBErr] = useState<string | null>(null);
-  const paragraphs = brief?.paragraphs ?? DEFAULT_PARAS;
+  const baseParagraphs = brief?.paragraphs ?? DEFAULT_PARAS;
+  // Personalize the morning greeting once the host has added their name.
+  const paragraphs = host.firstName
+    ? baseParagraphs.map((p, i) => (i === 0 ? p.replace(/^Good morning\./, `Good morning, ${host.firstName}.`) : p))
+    : baseParagraphs;
   const actions = brief?.actions ?? DEFAULT_ACTIONS;
 
   async function generateBriefing() {
