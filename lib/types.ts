@@ -43,6 +43,8 @@ export interface Review {
   d: string;
   stars: number;
   t: string;
+  /** True only when the client submitted it via a review request. Host-saved notes are false. */
+  verified?: boolean;
 }
 
 export interface ClientPayment {
@@ -58,6 +60,7 @@ export interface Client {
   initials: string;
   email: string;
   phone: string;
+  address?: string;
   tag: ClientTag;
   since: string;
   sessions: number;

@@ -539,6 +539,7 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
   const [name, setName] = useState(c.name);
   const [email, setEmail] = useState(c.email);
   const [phone, setPhone] = useState(c.phone);
+  const [address, setAddress] = useState(c.address ?? "");
   const [tag, setTag] = useState<ClientTag>(c.tag);
   const [color, setColor] = useState(c.color);
   const [photo, setPhoto] = useState<string | null>(c.photo ?? null);
@@ -564,6 +565,7 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2"><h2 className="text-lg font-semibold truncate">{name}</h2><Pill tone={tagTone}>{tag}</Pill></div>
           <div className="text-[13px] text-muted truncate">{[email, phone].filter(Boolean).join(" · ") || "No contact info yet"}</div>
+          {address && <a href={mapsUrl(address)} target="_blank" rel="noreferrer" className="text-[12px] text-accent truncate block mt-0.5">{address}</a>}
           <button onClick={() => setEditing((v) => !v)} className="text-[12px] text-accent font-medium mt-1">{editing ? "Close editor" : "Edit details"}</button>
         </div>
         <div className="text-center"><ScoreRing score={c.avgScore} size={50} /><div className="text-[10px] text-faint mt-1">Avg score</div></div>
@@ -588,6 +590,7 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="inp !text-[13px]" />
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="inp !text-[13px]" />
           </div>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address (for in-person or on-site visits)" className="inp !text-[13px]" />
           <select value={tag} onChange={(e) => setTag(e.target.value as ClientTag)} className="inp !text-[13px]">
             {(["New lead", "Repeat", "Package", "At risk", "Overdue"] as ClientTag[]).map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -665,16 +668,21 @@ function ClientDetail({ client: c, onClose, onOpenSession }: { client: Client; o
       {tab === "reviews" && (
         <div className="space-y-3">
           <div className="flex justify-end gap-2">
-            <Btn size="sm" variant="secondary" onClick={() => toast(`Review request drafted for ${name}`)}><Icon.pencil className="w-4 h-4" />Request review</Btn>
-            <Btn size="sm" variant="secondary" onClick={() => setAddPanel(addPanel === "review" ? null : "review")}><Icon.plus className="w-4 h-4" />Add testimonial</Btn>
+            <Btn size="sm" onClick={() => toast(`Review request drafted for ${name}`)}><Icon.pencil className="w-4 h-4" />Request review</Btn>
+            <Btn size="sm" variant="secondary" onClick={() => setAddPanel(addPanel === "review" ? null : "review")}><Icon.plus className="w-4 h-4" />Save a kind word</Btn>
           </div>
-          {addPanel === "review" && <AddReviewForm onAdd={(r) => { setReviews((rv) => [r, ...rv]); setAddPanel(null); toast("Testimonial added"); }} onCancel={() => setAddPanel(null)} />}
+          <p className="text-[12px] text-muted">Reviews clients submit are <span className="text-good font-medium">verified</span> and can be shown publicly. Anything you save yourself is a private note, kept for your records only.</p>
+          {addPanel === "review" && <AddReviewForm onAdd={(r) => { setReviews((rv) => [r, ...rv]); setAddPanel(null); toast("Saved to your records"); }} onCancel={() => setAddPanel(null)} />}
           {reviews.length ? reviews.map((r, i) => (
             <Card key={i} className="!p-4">
-              <div className="flex items-center gap-1 mb-1.5">{Array.from({ length: 5 }).map((_, k) => <Star key={k} filled={k < r.stars} />)}<span className="text-[11px] text-faint ml-1">{r.d}</span></div>
+              <div className="flex items-center gap-1 mb-1.5">
+                {Array.from({ length: 5 }).map((_, k) => <Star key={k} filled={k < r.stars} />)}
+                <span className="text-[11px] text-faint ml-1">{r.d}</span>
+                <span className="ml-auto">{r.verified ? <Pill tone="good"><Icon.check className="w-3 h-3" />Verified</Pill> : <Pill tone="neutral">Private note</Pill>}</span>
+              </div>
               <p className="text-[13px] text-ink/90 italic">“{r.t}”</p>
             </Card>
-          )) : <Empty>No reviews yet. Request one after a session, or add a testimonial you received elsewhere.</Empty>}
+          )) : <Empty>No reviews yet. Send a request after a session to collect a verified one.</Empty>}
         </div>
       )}
       {tab === "payments" && (
@@ -717,9 +725,10 @@ function AddReviewForm({ onAdd, onCancel }: { onAdd: (r: Review) => void; onCanc
   const [text, setText] = useState("");
   return (
     <Card className="!p-3.5 space-y-2">
+      <div className="text-[12px] text-muted">Save a kind word you got by text or email. This stays private to you and is marked unverified — it can&apos;t be shown publicly.</div>
       <div className="flex items-center gap-1">{[1, 2, 3, 4, 5].map((n) => <button key={n} onClick={() => setStars(n)}><Star filled={n <= stars} /></button>)}</div>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Paste the testimonial you received…" className="inp !text-[13px] resize-none" />
-      <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={onCancel}>Cancel</Btn><Btn size="sm" onClick={() => text.trim() && onAdd({ d: "Added today", stars, t: text.trim() })}>Add</Btn></div>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Paste what they said…" className="inp !text-[13px] resize-none" />
+      <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={onCancel}>Cancel</Btn><Btn size="sm" onClick={() => text.trim() && onAdd({ d: "Saved today", stars, t: text.trim(), verified: false })}>Save note</Btn></div>
     </Card>
   );
 }

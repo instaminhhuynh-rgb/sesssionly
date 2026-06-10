@@ -46,7 +46,7 @@ export const CLIENTS: Client[] = [
       { d: "Jun 8", t: "Session 7, mapped the promotion conversation. Felt much more confident. Wants to role-play the salary ask next time." },
       { d: "May 25", t: "Discussed manager friction. Action: send weekly update email to skip-level." },
     ],
-    reviews: [{ d: "May 2026", stars: 5, t: "Minh helped me reframe how I show up in leadership meetings. I got the promotion. Worth every dollar." }],
+    reviews: [{ d: "May 2026", stars: 5, t: "Minh helped me reframe how I show up in leadership meetings. I got the promotion. Worth every dollar.", verified: true }],
     payments: [{ d: "Jun 1", amt: 180, status: "Paid", what: "1:1 Coaching" }, { d: "May 18", amt: 180, status: "Paid", what: "1:1 Coaching" }],
   },
   {
@@ -73,7 +73,7 @@ export const CLIENTS: Client[] = [
     lastSeen: "Last week", nextLabel: "Today 3:30 PM", avgScore: 88, lifetime: 3840, color: "#5B8266",
     prefs: ["Monthly package", "Founder, fundraising stress", "Likes structured agendas"],
     notes: [{ d: "Jun 2", t: "Session focused on board update narrative. Renewal due, package resets Jun 30." }],
-    reviews: [{ d: "Mar 2026", stars: 5, t: "The monthly cadence keeps me accountable. Sessionly reminders mean I never miss." }],
+    reviews: [{ d: "Mar 2026", stars: 5, t: "The monthly cadence keeps me accountable. Sessionly reminders mean I never miss.", verified: true }],
     payments: [{ d: "Jun 1", amt: 640, status: "Paid", what: "Monthly Package" }],
   },
   {

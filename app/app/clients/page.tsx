@@ -34,7 +34,7 @@ export default function ClientsPage() {
     return m && f;
   });
 
-  function addClient(data: { name: string; email: string; phone: string; tag: ClientTag; note: string; color: string; photo: string | null }) {
+  function addClient(data: { name: string; email: string; phone: string; address: string; tag: ClientTag; note: string; color: string; photo: string | null }) {
     const now = new Date();
     const client: Client = {
       id: "cl_" + now.getTime(),
@@ -42,6 +42,7 @@ export default function ClientsPage() {
       initials: initialsOf(data.name),
       email: data.email.trim(),
       phone: data.phone.trim(),
+      address: data.address.trim(),
       tag: data.tag,
       since: now.toISOString().slice(0, 7),
       sessions: 0,
@@ -111,10 +112,11 @@ export default function ClientsPage() {
   );
 }
 
-function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: { name: string; email: string; phone: string; tag: ClientTag; note: string; color: string; photo: string | null }) => void }) {
+function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: { name: string; email: string; phone: string; address: string; tag: ClientTag; note: string; color: string; photo: string | null }) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [tag, setTag] = useState<ClientTag>("New lead");
   const [note, setNote] = useState("");
   const [color, setColor] = useState(PALETTE[0]);
@@ -177,6 +179,10 @@ function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: 
             </div>
           </div>
           <div>
+            <label className="text-[12px] font-semibold text-faint uppercase block mb-1">Address</label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="For in-person or on-site visits" className="inp" />
+          </div>
+          <div>
             <label className="text-[12px] font-semibold text-faint uppercase block mb-1.5">Tag</label>
             <select value={tag} onChange={(e) => setTag(e.target.value as ClientTag)} className="inp">
               <option value="New lead">New lead</option>
@@ -194,7 +200,7 @@ function AddClientModal({ onClose, onSave }: { onClose: () => void; onSave: (d: 
 
         <div className="flex justify-end gap-2 mt-5">
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn onClick={() => valid && onSave({ name, email, phone, tag, note, color, photo })} className={valid ? "" : "opacity-50 pointer-events-none"}>Add client</Btn>
+          <Btn onClick={() => valid && onSave({ name, email, phone, address, tag, note, color, photo })} className={valid ? "" : "opacity-50 pointer-events-none"}>Add client</Btn>
         </div>
       </div>
     </div>
