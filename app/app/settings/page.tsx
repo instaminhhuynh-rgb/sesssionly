@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Btn, Card, Pill, SectionTitle, Segmented, Toggle, cx } from "@/components/ui";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { paymentsConfigured } from "@/lib/payments/config";
 import { Icon } from "@/components/icons";
 import { PageIntro } from "@/components/page-intro";
 import { useToast } from "@/components/toast";
@@ -90,7 +91,7 @@ export default function SettingsPage() {
           </button>
           <div className="flex-1 min-w-0">
             <div className="font-medium truncate">{host.firstName || host.lastName ? `${host.firstName} ${host.lastName}`.trim() : "Add your name"}</div>
-            <div className="text-[13px] text-muted truncate">{host.business || "Your business"} · sessionly.com/{host.slug}</div>
+            <div className="text-[13px] text-muted truncate">{host.business || "Your business"} · sessionlyhq.com/{host.slug}</div>
             {host.address && <div className="text-[12px] text-faint truncate">{host.address}</div>}
           </div>
           <div className="flex gap-2 shrink-0">
@@ -115,7 +116,7 @@ export default function SettingsPage() {
             </div>
             <input value={pf.address} onChange={(e) => setPf({ ...pf, address: e.target.value })} placeholder="Business address (used for travel & directions)" className="inp !text-[13px]" />
             <div className="flex items-center gap-1 text-[13px]">
-              <span className="text-muted shrink-0">sessionly.com/</span>
+              <span className="text-muted shrink-0">sessionlyhq.com/</span>
               <input value={pf.slug} onChange={(e) => setPf({ ...pf, slug: e.target.value.replace(/[^a-z0-9-]/gi, "").toLowerCase() })} placeholder="you" className="inp !text-[13px]" />
             </div>
             <div className="flex justify-end gap-2"><Btn size="sm" variant="secondary" onClick={() => setEditingProfile(false)}>Cancel</Btn><Btn size="sm" onClick={() => { setHost(pf); setEditingProfile(false); toast("Profile saved"); }}>Save</Btn></div>
@@ -124,7 +125,7 @@ export default function SettingsPage() {
       </Group>
 
       <Group title="Your booking page">
-        <p className="text-[13px] text-muted">What clients see at sessionly.com/{host.slug}. Add a cover, a short intro video, a bio, and photos of your work.</p>
+        <p className="text-[13px] text-muted">What clients see at sessionlyhq.com/{host.slug}. Add a cover, a short intro video, a bio, and photos of your work.</p>
         <div>
           <div className="text-[12px] font-semibold text-faint uppercase mb-1.5">Cover photo</div>
           <button onClick={() => coverRef.current?.click()} className="block w-full h-28 rounded-[12px] overflow-hidden border border-line relative" style={{ background: bookingPage.coverPhoto ? undefined : "#2B3A4A" }}>
@@ -158,6 +159,23 @@ export default function SettingsPage() {
           <input ref={galleryRef} type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={onPickGallery} className="hidden" />
         </div>
         <a href={`/book/${host.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent font-medium">View your booking page →</a>
+      </Group>
+
+      <Group title="Payments">
+        <div className="flex items-center gap-3">
+          <span className={cx("w-2 h-2 rounded-full", paymentsConfigured ? "bg-good" : "bg-[#C9C9C4]")} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-medium">{paymentsConfigured ? "Connected via Stripe" : "Demo mode"}</div>
+            <div className="text-[12px] text-muted">
+              {paymentsConfigured
+                ? "Deposits and no-show fees charge real cards. You keep 100% of your clients — no commission."
+                : "Deposits and no-show charges are simulated. Add your Stripe keys to take real payments."}
+            </div>
+          </div>
+          <Btn size="sm" variant="secondary" onClick={() => toast(paymentsConfigured ? "Opening Stripe dashboard is coming soon" : "Connect Stripe to take real payments")}>
+            {paymentsConfigured ? "Manage" : "Connect"}
+          </Btn>
+        </div>
       </Group>
 
       <Group title="Style Studio">

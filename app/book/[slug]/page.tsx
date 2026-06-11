@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, Btn, cx } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { HOST, getServices } from "@/lib/mock-data";
+import { paymentsConfigured } from "@/lib/payments/config";
 import type { Service } from "@/lib/types";
 
 /* The client-facing storefront. No app nav. Reads what the owner set in the
@@ -57,8 +58,35 @@ export default function BookPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const canConfirm = form.name.trim() && (form.email.trim() || form.phone.trim());
 
+  const [paying, setPaying] = useState(false);
+
   function pickService(s: Service) { setService(s); setStep("time"); window.scrollTo({ top: 0 }); }
   function pickSlot(sl: string) { setSlot(sl); setStep("details"); window.scrollTo({ top: 0 }); }
+
+  // Confirm the booking. With a real deposit + live Stripe, redirect to Checkout
+  // to collect it; in demo (or no deposit) proceed straight to confirmation.
+  async function confirmBooking() {
+    if (!service) return;
+    if (service.deposit > 0) {
+      setPaying(true);
+      try {
+        const here = typeof window !== "undefined" ? window.location.pathname : "/";
+        const res = await fetch("/api/payments/deposit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serviceName: service.name, amount: service.deposit, clientName: form.name, clientEmail: form.email, successPath: here, cancelPath: here }),
+        });
+        const data = await res.json();
+        if (data?.source === "stripe" && data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
+      } catch {
+        /* demo / offline: proceed to the confirmation anyway */
+      } finally {
+        setPaying(false);
+      }
+    }
+    setStep("done");
+    window.scrollTo({ top: 0 });
+  }
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -147,13 +175,15 @@ export default function BookPage() {
                   <div className="bg-surface border border-line rounded-xl2 p-4">
                     <div className="text-[13px] font-medium">Hold your spot</div>
                     <p className="text-[12px] text-muted mt-0.5">A ${service.deposit} deposit secures this time and comes off your ${service.price} total. {service.cancelWindow}h cancellation policy.</p>
-                    <input placeholder="Card number" className="inp mt-2.5" />
+                    {!paymentsConfigured && <input placeholder="Card number" className="inp mt-2.5" />}
                   </div>
                 )}
-                <Btn size="lg" className={cx("w-full", canConfirm ? "" : "opacity-50 pointer-events-none")} onClick={() => { setStep("done"); window.scrollTo({ top: 0 }); }}>
-                  {service.deposit > 0 ? `Confirm & pay $${service.deposit} deposit` : "Confirm booking"}
+                <Btn size="lg" className={cx("w-full", canConfirm && !paying ? "" : "opacity-50 pointer-events-none")} onClick={confirmBooking}>
+                  {paying ? "Processing…" : service.deposit > 0 ? `Confirm & pay $${service.deposit} deposit` : "Confirm booking"}
                 </Btn>
-                <p className="text-[11px] text-faint text-center">This is a demo. No card is charged.</p>
+                <p className="text-[11px] text-faint text-center">
+                  {service.deposit > 0 && paymentsConfigured ? "Secured by Stripe. You'll enter your card on the next step." : "This is a demo. No card is charged."}
+                </p>
               </div>
             </>
           )}

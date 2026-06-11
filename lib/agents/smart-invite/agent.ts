@@ -49,7 +49,7 @@ export async function draftInvite(input: InviteInput): Promise<InviteDraft> {
       requireDeposit: input.reqDeposit && service.deposit > 0,
       requireIntake: input.reqIntake,
       suggestedTimes: SUGGESTED,
-      bookingLink: `sessionly.com/${HOST.slug}/invite`,
+      bookingLink: `sessionlyhq.com/${HOST.slug}/invite`,
     };
     const spec = getAgent("smart_invite");
 
@@ -81,7 +81,7 @@ export function template(input: InviteInput, serviceName: string, deposit: numbe
     ...SUGGESTED.map((t) => `  ${t}`),
     input.reqDeposit && deposit ? `A $${deposit} deposit holds your spot, and it comes off the $${price} total.` : "",
     input.reqIntake ? `There's a quick intake so I can prepare. It takes about two minutes.` : "",
-    `Pick a time here: sessionly.com/${HOST.slug}/invite`,
+    `Pick a time here: sessionlyhq.com/${HOST.slug}/invite`,
     ``,
     `{{sender}}`,
   ].filter((l) => l !== "");

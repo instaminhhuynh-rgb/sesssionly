@@ -160,7 +160,7 @@ function SmartInvite({ toName, onClose }: { toName?: string; onClose: () => void
       `  • Mon Jun 15, 9:00 AM`,
       reqDeposit && s.deposit ? `A $${s.deposit} deposit holds your spot (applied to the $${s.price} total).` : null,
       reqIntake ? `There's a quick intake so I can prepare — takes 2 minutes.` : null,
-      `Pick a time here: sessionly.com/${host.slug}/invite\n\n${host.firstName || "[Your name]"}`,
+      `Pick a time here: sessionlyhq.com/${host.slug}/invite\n\n${host.firstName || "[Your name]"}`,
     ]
       .filter(Boolean)
       .join("\n");
